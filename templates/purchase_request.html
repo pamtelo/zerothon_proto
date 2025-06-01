@@ -1,0 +1,269 @@
+{% extends "layout.html" %}
+
+{% block title %}구매요청의뢰 - 안전재고관리 시스템{% endblock %}
+
+{% block head %}
+<style>
+    .history-table {
+        font-size: 14px;
+    }
+    
+    .price-highlight {
+        font-weight: bold;
+        color: #1a73e8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>구매요청의뢰</h2>
+    
+    <!-- 사용자 정보 섹션 -->
+    <div class="user-info">
+        <div class="user-info-item">
+            <strong>부서명:</strong> {{ user_info.department }}
+        </div>
+        <div class="user-info-item">
+            <strong>사번:</strong> {{ user_info.employee_id }}
+        </div>
+        <div class="user-info-item">
+            <strong>직급:</strong> {{ user_info.position }}
+        </div>
+        <div class="user-info-item">
+            <strong>성명:</strong> {{ user_info.name }}
+        </div>
+    </div>
+    
+    <!-- 품목 정보 섹션 -->
+    <div class="card">
+        <h3>품목 정보</h3>
+        <table>
+            <tr>
+                <th>품목코드</th>
+                <td>{{ item_info.item_code }}</td>
+                <th>품목</th>
+                <td>{{ item_info.item }}</td>
+            </tr>
+            <tr>
+                <th>규격</th>
+                <td>{{ item_info.specification }}</td>
+                <th>단위</th>
+                <td>{{ item_info.unit }}</td>
+            </tr>
+            <tr>
+                <th>현재고</th>
+                <td>{{ item_info.current_stock }}</td>
+                <th>안전재고</th>
+                <td>{{ item_info.safety_stock }}</td>
+            </tr>
+            <tr>
+                <th>카테고리</th>
+                <td colspan="3">{{ item_info.category }}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <!-- 과거 구매이력 및 예측 섹션 -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <h3>과거 구매이력</h3>
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>구매일자</th>
+                            <th>수량</th>
+                            <th>단가</th>
+                            <th>총액</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for history in purchase_history %}
+                        <tr>
+                            <td>{{ history.purchase_date }}</td>
+                            <td>{{ history.quantity }}</td>
+                            <td>{{ history.unit_price }}</td>
+                            <td>{{ history.total_price }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="col">
+            <div class="card">
+                <h3>구매단가 추이 및 예측</h3>
+                <div id="price-chart" class="graph-container"></div>
+                <div class="price-highlight">
+                    예측 구매단가: {{ predict_price }}원
+                </div>
+                <div style="color: #777; font-size: 12px; margin-top: 5px;">머신러닝으로 예측한 값입니다.</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- AI 예산 추천 섹션 -->
+    <div class="card">
+        <h3>적정구매예산 추천</h3>
+        <div class="recommendation">
+            {{ recommendation }}
+        </div>
+        <div style="color: #777; font-size: 12px; margin-top: 10px;">ChatGPT의 의견입니다.</div>
+    </div>
+    
+    <!-- 구매의뢰 폼 -->
+    <div class="card">
+        <h3>구매의뢰서</h3>
+        <form id="purchase-form" class="purchase-form">
+            <input type="hidden" name="item_code" value="{{ item_info.item_code }}">
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>품목코드</th>
+                        <th>품목</th>
+                        <th>규격</th>
+                        <th>단위</th>
+                        <th>수량</th>
+                        <th>단가</th>
+                        <th>구매예산</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ item_info.item_code }}</td>
+                        <td>{{ item_info.item }}</td>
+                        <td>{{ item_info.specification }}</td>
+                        <td>{{ item_info.unit }}</td>
+                        <td>
+                            <input type="number" id="quantity" name="quantity" class="form-control" min="1" value="1" required>
+                        </td>
+                        <td>
+                            <input type="number" id="unit_price" name="unit_price" class="form-control" value="{{ budget }}" required>
+                        </td>
+                        <td id="total-budget">{{ budget }}원</td>
+                        <td>
+                            <button type="submit" class="btn">구매요청의뢰</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_js %}
+<script>
+// 과거 단가 및 예측 차트 생성
+const graphData = {{ graph_data|safe }};
+const priceData = [];
+const predictData = [];
+
+graphData.forEach(item => {
+    if (item.type === "과거 구매단가") {
+        priceData.push({
+            x: item.year,
+            y: item.price
+        });
+    } else {
+        predictData.push({
+            x: item.year,
+            y: item.price
+        });
+    }
+});
+
+const trace1 = {
+    x: graphData.filter(item => item.type === "과거 구매단가").map(item => item.year),
+    y: graphData.filter(item => item.type === "과거 구매단가").map(item => item.price),
+    type: 'scatter',
+    mode: 'lines+markers',
+    name: '과거 구매단가',
+    line: {
+        color: 'blue',
+        width: 2
+    },
+    marker: {
+        size: 8
+    }
+};
+
+const trace2 = {
+    x: graphData.filter(item => item.type === "예측 구매단가").map(item => item.year),
+    y: graphData.filter(item => item.type === "예측 구매단가").map(item => item.price),
+    type: 'scatter',
+    mode: 'markers',
+    name: '예측 구매단가',
+    marker: {
+        color: 'red',
+        size: 10,
+        symbol: 'diamond'
+    }
+};
+
+const layout = {
+    title: '연도별 구매단가 추이',
+    xaxis: {
+        title: '연도'
+    },
+    yaxis: {
+        title: '단가 (원)'
+    },
+    margin: {
+        l: 50,
+        r: 50,
+        b: 50,
+        t: 50,
+        pad: 4
+    }
+};
+
+Plotly.newPlot('price-chart', [trace1, trace2], layout);
+
+// 수량 및 단가 변경 시 총액 계산
+$('#quantity, #unit_price').on('input', function() {
+    const quantity = parseInt($('#quantity').val()) || 0;
+    const unitPrice = parseInt($('#unit_price').val()) || 0;
+    const totalBudget = quantity * unitPrice;
+    $('#total-budget').text(totalBudget.toLocaleString() + '원');
+});
+
+// 페이지 로드 시 초기 계산 수행
+$(document).ready(function() {
+    const quantity = parseInt($('#quantity').val()) || 0;
+    const unitPrice = parseInt($('#unit_price').val()) || 0;
+    const totalBudget = quantity * unitPrice;
+    $('#total-budget').text(totalBudget.toLocaleString() + '원');
+});
+
+// 구매요청 폼 제출
+$('#purchase-form').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        item_code: $('input[name="item_code"]').val(),
+        quantity: $('#quantity').val(),
+        unit_price: $('#unit_price').val(),
+        total_budget: $('#total-budget').text()
+    };
+    
+    $.ajax({
+        url: '/submit_purchase',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(formData),
+        success: function(response) {
+            alert('구매요청이 성공적으로 처리되었습니다.');
+            window.location.href = '/';
+        },
+        error: function(error) {
+            alert('오류가 발생했습니다. 다시 시도해주세요.');
+        }
+    });
+});
+</script>
+{% endblock %} 

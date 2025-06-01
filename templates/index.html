@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+
+{% block title %}안전재고 대시보드 - 안전재고관리 시스템{% endblock %}
+
+{% block head %}
+<style>
+    .alert-box {
+        background-color: #fffacd;
+        padding: 10px 15px;
+        margin: 15px 0;
+        border-radius: 5px;
+        border-left: 4px solid #ffd700;
+    }
+    
+    .table-container {
+        max-height: 600px; /* 약 20줄 정도의 높이 */
+        overflow-y: auto;
+        margin-bottom: 20px;
+    }
+    
+    .status-warning {
+        color: #ea4335;
+        font-weight: bold;
+    }
+    
+    .status-caution {
+        color: #fbbc05;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>안전재고 대시보드</h2>
+    <p>안전재고 미만인 품목 목록입니다. 구매요청 버튼을 클릭하여 구매의뢰를 진행하세요.</p>
+    
+    <div class="alert-box">
+        <strong>안전재고 미달항목 {{ low_stock_count }}건</strong>이 발견되었습니다.
+    </div>
+    
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>품목코드</th>
+                    <th>품목</th>
+                    <th>규격</th>
+                    <th>현재고</th>
+                    <th>안전재고</th>
+                    <th>리드타임</th>
+                    <th>상태</th>
+                    <th>액션</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in low_stock %}
+                <tr>
+                    <td>{{ item.item_code }}</td>
+                    <td>{{ item.item }}</td>
+                    <td>{{ item.specification }}</td>
+                    <td>{{ item.current_stock }}</td>
+                    <td>{{ item.safety_stock }}</td>
+                    <td>{{ item.lead_time }}</td>
+                    <td class="{% if '부족' in item.status %}status-warning{% elif '주의' in item.status %}status-caution{% endif %}">{{ item.status }}</td>
+                    <td>
+                        <a href="{{ url_for('purchase_request', item_code=item.item_code) }}" class="btn">구매요청</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %} 
