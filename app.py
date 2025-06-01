@@ -228,5 +228,8 @@ def submit_purchase():
     # 실제 시스템에서는 DB에 저장하거나 메일 발송 등의 작업 수행
     return jsonify({"status": "success", "message": "구매 요청이 성공적으로 처리되었습니다."})
 
-if __name__ == '__main__':
-    app.run(debug=True) 
+if __name__ == "__main__":
+    # 로컬 개발 환경에서는 localhost에서 실행
+    # Render.com 등 배포 환경에서는 0.0.0.0으로 바인딩하고 환경 변수에서 포트 가져옴
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port) 
