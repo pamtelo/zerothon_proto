@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>안전재고관리 및 적정구매예산 제안 서비스</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            border-bottom: 2px solid #2962ff;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #2962ff;
+        }
+        h2 {
+            color: #1565c0;
+            margin-top: 30px;
+        }
+        .feature {
+            background-color: #f5f5f5;
+            border-left: 4px solid #2962ff;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        footer {
+            margin-top: 50px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+            text-align: center;
+            color: #777;
+        }
+        .screenshot {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>안전재고관리 및 적정구매예산 제안 서비스</h1>
+        <p>재고 관리를 효율적으로 하고 적정 구매예산을 예측하는 웹 애플리케이션</p>
+    </header>
+
+    <main>
+        <section>
+            <h2>프로젝트 소개</h2>
+            <p>이 프로젝트는 기업의 안전재고를 관리하고 적정구매예산을 제안하는 웹 기반 서비스입니다. 머신러닝을 활용한 가격 예측과 OpenAI API를 이용한 구매예산 추천 기능을 제공합니다.</p>
+        </section>
+
+        <section>
+            <h2>주요 기능</h2>
+            <div class="feature">
+                <h3>안전재고 모니터링</h3>
+                <p>안전재고 미만인 품목을 자동으로 식별하고 대시보드에 표시합니다. 품목별 리드타임을 고려하여 재고 상태를 "재고 부족"과 "주의" 상태로 구분합니다.</p>
+            </div>
+            
+            <div class="feature">
+                <h3>구매단가 추이 및 예측</h3>
+                <p>과거 구매단가 추이를 그래프로 시각화하고, 머신러닝을 통해 예측된 미래 구매단가를 제공합니다.</p>
+            </div>
+            
+            <div class="feature">
+                <h3>적정구매예산 추천</h3>
+                <p>예측 구매단가와 시장 동향을 분석하여 적정구매예산을 추천합니다. OpenAI API를 활용하여 구매 전문가의 조언을 제공합니다.</p>
+            </div>
+            
+            <div class="feature">
+                <h3>구매의뢰서 작성</h3>
+                <p>필요한 품목에 대한 구매의뢰서를 작성하고 제출할 수 있습니다. 수량과 단가에 따른 총 구매예산을 자동으로 계산합니다.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>기술 스택</h2>
+            <ul>
+                <li><strong>백엔드:</strong> Python, Flask</li>
+                <li><strong>데이터 처리:</strong> Pandas, NumPy</li>
+                <li><strong>데이터 시각화:</strong> Plotly</li>
+                <li><strong>AI 통합:</strong> OpenAI API</li>
+                <li><strong>프론트엔드:</strong> HTML, CSS, JavaScript, jQuery</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>설치 및 실행 방법</h2>
+            <ol>
+                <li>저장소 클론: <code>git clone https://github.com/pamtelo/zerothon_proto.git</code></li>
+                <li>필요한 패키지 설치: <code>pip install -r requirements.txt</code></li>
+                <li>애플리케이션 실행: <code>python app.py</code></li>
+                <li>웹 브라우저에서 <code>http://localhost:5000</code> 접속</li>
+            </ol>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2025 안전재고관리 및 적정구매예산 제안 서비스</p>
+        <p><a href="https://github.com/pamtelo/zerothon_proto">GitHub 저장소 방문하기</a></p>
+    </footer>
+</body>
+</html> 
