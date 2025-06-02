@@ -1,24 +1,84 @@
-import pandas as pd
-import numpy as np
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 import openai
 import os
 import json
+import csv
+from datetime import datetime
 
 app = Flask(__name__)
 
-# 데이터 로드
+# 데이터 로드 - CSV 파일을 직접 읽어 딕셔너리로 변환
 def load_data():
-    inventory = pd.read_csv('inventory.csv')
-    purchase_history = pd.read_csv('purchase_history.csv')
-    annual_unit_price = pd.read_csv('annual_unit_price.csv')
-    predict = pd.read_csv('predict.csv')
+    # 인벤토리 데이터 로드
+    inventory = []
+    with open('inventory.csv', 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            # 컬럼 이름 공백 제거
+            clean_row = {k.strip(): v for k, v in row.items()}
+            # 숫자 타입 변환
+            if 'current_stock' in clean_row:
+                clean_row['current_stock'] = int(clean_row['current_stock'])
+            if 'safety_stock' in clean_row:
+                clean_row['safety_stock'] = int(clean_row['safety_stock'])
+            inventory.append(clean_row)
     
-    # 모든 데이터프레임의 컬럼 이름 공백 제거
-    inventory.columns = inventory.columns.str.strip()
-    purchase_history.columns = purchase_history.columns.str.strip()
-    annual_unit_price.columns = annual_unit_price.columns.str.strip()
-    predict.columns = predict.columns.str.strip()
+    # 구매 이력 데이터 로드
+    purchase_history = []
+    with open('purchase_history.csv', 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            # 컬럼 이름 공백 제거
+            clean_row = {k.strip(): v for k, v in row.items()}
+            # 숫자 타입 변환
+            if 'purchase_year' in clean_row:
+                clean_row['purchase_year'] = int(clean_row['purchase_year'])
+            if 'lead_time' in clean_row:
+                clean_row['lead_time'] = int(clean_row['lead_time'])
+            if 'quantity' in clean_row:
+                try:
+                    clean_row['quantity'] = int(clean_row['quantity'])
+                except ValueError:
+                    pass
+            if 'unit_price' in clean_row:
+                try:
+                    clean_row['unit_price'] = int(clean_row['unit_price'])
+                except ValueError:
+                    pass
+            if 'total_price' in clean_row:
+                try:
+                    clean_row['total_price'] = int(clean_row['total_price'])
+                except ValueError:
+                    pass
+            purchase_history.append(clean_row)
+    
+    # 연간 단가 데이터 로드
+    annual_unit_price = []
+    with open('annual_unit_price.csv', 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            # 컬럼 이름 공백 제거
+            clean_row = {k.strip(): v for k, v in row.items()}
+            # 숫자로 변환 가능한 필드 변환
+            for key, value in clean_row.items():
+                if key != 'item_code' and value.strip():
+                    try:
+                        clean_row[key] = int(value)
+                    except ValueError:
+                        pass
+            annual_unit_price.append(clean_row)
+    
+    # 예측 데이터 로드
+    predict = []
+    with open('predict.csv', 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            # 컬럼 이름 공백 제거
+            clean_row = {k.strip(): v for k, v in row.items()}
+            # 숫자 타입 변환
+            if 'predict_price' in clean_row:
+                clean_row['predict_price'] = int(clean_row['predict_price'])
+            predict.append(clean_row)
     
     return inventory, purchase_history, annual_unit_price, predict
 
@@ -35,87 +95,91 @@ def index():
     inventory, purchase_history, _, _ = load_data()
     
     # 안전재고 미만인 항목 필터링
-    low_stock = inventory[inventory['current_stock'] < inventory['safety_stock']].copy()
+    low_stock = []
+    for item in inventory:
+        if item['current_stock'] < item['safety_stock']:
+            low_stock.append(item.copy())  # 복사본 사용
     
     # 품목별로 가장 최근 구매 기록의 리드타임 가져오기
-    for idx, item in low_stock.iterrows():
+    for item in low_stock:
         item_code = item['item_code']
         # 해당 품목의 구매 이력 가져오기
-        item_history = purchase_history[purchase_history['item_code'] == item_code]
+        item_history = [h for h in purchase_history if h['item_code'] == item_code]
         
-        if not item_history.empty:
+        if item_history:
             # 구매 연도를 기준으로 정렬하여 가장 최근 데이터 가져오기
-            latest_purchase = item_history.sort_values(by='purchase_year', ascending=False).iloc[0]
+            item_history.sort(key=lambda x: x['purchase_year'], reverse=True)
+            latest_purchase = item_history[0]
             lead_time = f"{latest_purchase['lead_time']}일"
-            low_stock.loc[idx, 'lead_time'] = lead_time
+            item['lead_time'] = lead_time
         else:
             # 구매 이력이 없는 경우 기본값 설정
-            low_stock.loc[idx, 'lead_time'] = "3일"
+            item['lead_time'] = "3일"
     
     # 상태 설정: 현재고가 안전재고보다 작거나 같으면 "재고 부족", 안전재고의 105% 이내면 "주의"
-    for idx, item in low_stock.iterrows():
+    for item in low_stock:
         current = item['current_stock']
         safety = item['safety_stock']
         
         if current <= safety:
-            low_stock.loc[idx, 'status'] = "⚠ 재고 부족"
+            item['status'] = "⚠ 재고 부족"
         elif current <= safety * 1.05:
-            low_stock.loc[idx, 'status'] = "⚠ 주의"
+            item['status'] = "⚠ 주의"
         else:
-            low_stock.loc[idx, 'status'] = "정상"
+            item['status'] = "정상"
     
     # 안전재고 미달 항목 개수
     low_stock_count = len(low_stock)
     
-    return render_template('index.html', low_stock=low_stock.to_dict('records'), low_stock_count=low_stock_count)
+    return render_template('index.html', low_stock=low_stock, low_stock_count=low_stock_count)
 
 @app.route('/purchase_request/<item_code>')
 def purchase_request(item_code):
     inventory, purchase_history, annual_unit_price, predict = load_data()
     
     # 해당 품목 정보 가져오기
-    item_info_series = inventory[inventory['item_code'] == item_code].iloc[0]
-    
-    # Series를 딕셔너리로 변환하여 템플릿에 전달
-    item_info = item_info_series.to_dict()
+    item_info = next((item for item in inventory if item['item_code'] == item_code), None)
+    if not item_info:
+        return "Item not found", 404
     
     # 해당 품목의 구매 이력 가져오기
-    item_purchase_history = purchase_history[purchase_history['item_code'] == item_code]
+    item_purchase_history = [h for h in purchase_history if h['item_code'] == item_code]
     
     # 구매 이력 데이터 천단위 콤마 포맷팅
-    purchase_history_records = item_purchase_history.to_dict('records')
-    for record in purchase_history_records:
-        if 'unit_price' in record:
+    purchase_history_records = []
+    for record in item_purchase_history:
+        formatted_record = record.copy()
+        if 'unit_price' in formatted_record:
             try:
-                record['unit_price'] = format(int(record['unit_price']), ',')
+                formatted_record['unit_price'] = format(int(formatted_record['unit_price']), ',')
             except (ValueError, TypeError):
                 pass
-        if 'total_price' in record:
+        if 'total_price' in formatted_record:
             try:
-                record['total_price'] = format(int(record['total_price']), ',')
+                formatted_record['total_price'] = format(int(formatted_record['total_price']), ',')
             except (ValueError, TypeError):
                 pass
-        if 'quantity' in record:
+        if 'quantity' in formatted_record:
             try:
-                record['quantity'] = format(int(record['quantity']), ',')
+                formatted_record['quantity'] = format(int(formatted_record['quantity']), ',')
             except (ValueError, TypeError):
                 pass
+        purchase_history_records.append(formatted_record)
     
     # 연도별 구매 단가 가져오기
-    item_annual_price = annual_unit_price[annual_unit_price['item_code'] == item_code]
+    item_annual_price = next((item for item in annual_unit_price if item['item_code'] == item_code), None)
     
     # 예측 가격 가져오기
-    item_predict_price = predict[predict['item_code'] == item_code].iloc[0]['predict_price']
+    item_predict_price = next((item['predict_price'] for item in predict if item['item_code'] == item_code), 0)
     
     # 그래프 데이터 준비
-    years = [col for col in item_annual_price.columns if col != 'item_code']
-    prices = item_annual_price.iloc[0][years].values
-    
-    # 결측치 제거
+    years = [key for key in item_annual_price.keys() if key != 'item_code']
     valid_years = []
     valid_prices = []
-    for year, price in zip(years, prices):
-        if not pd.isna(price):
+    
+    for year in years:
+        price = item_annual_price.get(year)
+        if price and str(price).strip():
             valid_years.append(year)
             valid_prices.append(price)
     
