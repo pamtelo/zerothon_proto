@@ -12,6 +12,12 @@
         font-weight: bold;
         color: #1a73e8;
     }
+    
+    .graph-container {
+        height: 300px;
+        width: 100%;
+        margin-bottom: 15px;
+    }
 </style>
 {% endblock %}
 
@@ -95,7 +101,9 @@
         <div class="col">
             <div class="card">
                 <h3>구매단가 추이 및 예측</h3>
-                <div id="price-chart" class="graph-container"></div>
+                <div class="graph-container">
+                    <canvas id="price-chart"></canvas>
+                </div>
                 <div class="price-highlight">
                     예측 구매단가: {{ predict_price }}원
                 </div>
@@ -158,71 +166,73 @@
 
 {% block scripts_js %}
 <script>
-// 과거 단가 및 예측 차트 생성
+// Chart.js를 사용하여 그래프 생성
 const graphData = {{ graph_data|safe }};
-const priceData = [];
-const predictData = [];
 
-graphData.forEach(item => {
-    if (item.type === "과거 구매단가") {
-        priceData.push({
-            x: item.year,
-            y: item.price
-        });
-    } else {
-        predictData.push({
-            x: item.year,
-            y: item.price
-        });
+// 데이터 준비
+const years = graphData.filter(item => item.type === "과거 구매단가").map(item => item.year);
+const prices = graphData.filter(item => item.type === "과거 구매단가").map(item => item.price);
+
+// 예측 데이터
+const predictYear = graphData.find(item => item.type === "예측 구매단가").year;
+const predictPrice = graphData.find(item => item.type === "예측 구매단가").price;
+
+// Chart.js 설정
+const ctx = document.getElementById('price-chart').getContext('2d');
+const priceChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [...years, predictYear],
+        datasets: [
+            {
+                label: '과거 구매단가',
+                data: [...prices, null],
+                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderWidth: 2,
+                tension: 0.1,
+                pointRadius: 5
+            },
+            {
+                label: '예측 구매단가',
+                data: Array(years.length).fill(null).concat([predictPrice]),
+                borderColor: 'rgba(255, 99, 132, 1)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderWidth: 2,
+                pointRadius: 8,
+                pointStyle: 'rectRot'
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            title: {
+                display: true,
+                text: '연도별 구매단가 추이',
+                font: {
+                    size: 16
+                }
+            }
+        },
+        scales: {
+            x: {
+                title: {
+                    display: true,
+                    text: '연도'
+                }
+            },
+            y: {
+                title: {
+                    display: true,
+                    text: '단가 (원)'
+                },
+                beginAtZero: false
+            }
+        }
     }
 });
-
-const trace1 = {
-    x: graphData.filter(item => item.type === "과거 구매단가").map(item => item.year),
-    y: graphData.filter(item => item.type === "과거 구매단가").map(item => item.price),
-    type: 'scatter',
-    mode: 'lines+markers',
-    name: '과거 구매단가',
-    line: {
-        color: 'blue',
-        width: 2
-    },
-    marker: {
-        size: 8
-    }
-};
-
-const trace2 = {
-    x: graphData.filter(item => item.type === "예측 구매단가").map(item => item.year),
-    y: graphData.filter(item => item.type === "예측 구매단가").map(item => item.price),
-    type: 'scatter',
-    mode: 'markers',
-    name: '예측 구매단가',
-    marker: {
-        color: 'red',
-        size: 10,
-        symbol: 'diamond'
-    }
-};
-
-const layout = {
-    title: '연도별 구매단가 추이',
-    xaxis: {
-        title: '연도'
-    },
-    yaxis: {
-        title: '단가 (원)'
-    },
-    margin: {
-        l: 50,
-        r: 50,
-        b: 50,
-        t: 50,
-        pad: 4
-    }
-};
-
-Plotly.newPlot('price-chart', [trace1, trace2], layout);
 
 // 수량 및 단가 변경 시 총액 계산
 $('#quantity, #unit_price').on('input', function() {

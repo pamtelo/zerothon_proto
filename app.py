@@ -1,7 +1,5 @@
 import pandas as pd
 import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 import openai
 import os
@@ -124,7 +122,7 @@ def purchase_request(item_code):
     # ChatGPT API를 사용하여 적정구매예산 추천
     recommendation, budget = get_budget_recommendation(item_info, valid_years, valid_prices, item_predict_price)
     
-    # 그래프 데이터 준비
+    # Chart.js용 그래프 데이터 준비
     graph_data = []
     for year, price in zip(valid_years, valid_prices):
         graph_data.append({"year": str(year), "price": float(price), "type": "과거 구매단가"})
