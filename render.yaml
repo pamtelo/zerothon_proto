@@ -6,4 +6,4 @@ services:
     startCommand: gunicorn wsgi:app
     envVars:
       - key: PYTHON_VERSION
-        value: 3.10.13 
+        value: 3.9.13 
