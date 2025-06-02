@@ -15,3 +15,39 @@ echo "Installing other dependencies..."
 pip install --no-cache-dir -r requirements.txt
 
 echo "Setup complete!"
+
+# 실행 권한 확인
+echo "Build script is running..."
+
+# Python 버전 확인
+python --version
+
+# Python 패키지 설치
+pip install -r requirements.txt
+
+# CSV 파일이 있는지 확인하고 권한 설정
+for file in *.csv; do
+  if [ -f "$file" ]; then
+    echo "CSV file found: $file"
+    chmod 644 "$file"
+  fi
+done
+
+# static 및 templates 디렉토리 권한 설정
+if [ -d "static" ]; then
+  chmod -R 755 static
+  echo "Set permissions for static directory"
+fi
+
+if [ -d "templates" ]; then
+  chmod -R 755 templates
+  echo "Set permissions for templates directory"
+fi
+
+# 웹 서비스 실행을 위한 wsgi.py 권한 설정
+if [ -f "wsgi.py" ]; then
+  chmod 755 wsgi.py
+  echo "Set permissions for wsgi.py"
+fi
+
+echo "Build script completed successfully."
