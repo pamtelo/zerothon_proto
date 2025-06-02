@@ -3,4 +3,7 @@ services:
     name: zerothon-proto
     env: python
     buildCommand: chmod +x build.sh && ./build.sh
-    startCommand: gunicorn wsgi:app 
+    startCommand: gunicorn wsgi:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.13 
