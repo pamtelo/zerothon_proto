@@ -41,8 +41,12 @@ def load_data():
         with open(purchase_path, 'r', encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             for row in reader:
-                # 컬럼 이름 공백 제거
-                clean_row = {k.strip() if k else k: v for k, v in row.items()}
+                # 컬럼 이름 공백 제거 및 원본 컬럼명 보존
+                clean_row = {}
+                for k, v in row.items():
+                    key = k.strip() if k else k
+                    clean_row[key] = v
+                
                 # 숫자 타입 변환
                 if 'purchase_year' in clean_row and clean_row['purchase_year']:
                     try:
@@ -69,6 +73,13 @@ def load_data():
                         clean_row['total_price'] = int(clean_row['total_price'])
                     except (ValueError, TypeError):
                         clean_row['total_price'] = 0
+                
+                # 모든 키가 있는지 확인하고, 없으면 빈 값 추가
+                required_keys = ['purchase_date', 'quantity', 'unit_price', 'total_price']
+                for key in required_keys:
+                    if key not in clean_row:
+                        clean_row[key] = ""
+                
                 purchase_history.append(clean_row)
         
         # 연간 단가 데이터 로드
@@ -191,26 +202,56 @@ def purchase_request(item_code):
         # 해당 품목의 구매 이력 가져오기
         item_purchase_history = [h for h in purchase_history if h.get('item_code', '') == item_code]
         
+        # 구매 이력 데이터 확인
+        print(f"품목 {item_code}의 구매 이력 건수: {len(item_purchase_history)}")
+        if item_purchase_history:
+            print(f"첫 번째 구매 이력 데이터 키: {list(item_purchase_history[0].keys())}")
+            print(f"unit_price 값: {item_purchase_history[0].get('unit_price', '없음')}")
+            print(f"total_price 값: {item_purchase_history[0].get('total_price', '없음')}")
+        
         # 구매 이력 데이터 천단위 콤마 포맷팅
         purchase_history_records = []
         for record in item_purchase_history:
             formatted_record = record.copy()
+            
+            # 필수 필드 확인
+            print(f"처리 중인 레코드: {formatted_record}")
+            
+            # 공백 처리된 컬럼명 확인
+            for key in list(formatted_record.keys()):
+                if ' unit_price' == key:
+                    formatted_record['unit_price'] = formatted_record.pop(key)
+                if ' total_price' == key:
+                    formatted_record['total_price'] = formatted_record.pop(key)
+            
+            # 단가 포맷팅
             if 'unit_price' in formatted_record and formatted_record['unit_price']:
                 try:
                     formatted_record['unit_price'] = format(int(formatted_record['unit_price']), ',')
                 except (ValueError, TypeError):
                     pass
+            
+            # 총액 포맷팅
             if 'total_price' in formatted_record and formatted_record['total_price']:
                 try:
                     formatted_record['total_price'] = format(int(formatted_record['total_price']), ',')
                 except (ValueError, TypeError):
                     pass
+            
+            # 수량 포맷팅
             if 'quantity' in formatted_record and formatted_record['quantity']:
                 try:
                     formatted_record['quantity'] = format(int(formatted_record['quantity']), ',')
                 except (ValueError, TypeError):
                     pass
+            
             purchase_history_records.append(formatted_record)
+        
+        # CSV 데이터 디버깅 로그
+        if purchase_history_records:
+            print(f"포맷팅 후 첫 번째 레코드: {purchase_history_records[0]}")
+        else:
+            print("포맷팅된 구매이력 데이터가 없습니다.")
         
         # 연도별 구매 단가 가져오기
         item_annual_price = next((item for item in annual_unit_price if item.get('item_code', '') == item_code), None)
